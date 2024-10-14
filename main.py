@@ -2,6 +2,7 @@ import linecache
 import re
 orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/pars/Elsulfaverin/orca/opt/1/1.out'
 
+
 total_energy = 'Total Energy'
 
 with open(orca_opt_nohup) as file:
