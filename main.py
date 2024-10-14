@@ -1,10 +1,8 @@
 import linecache
 import re
-orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/pars/Elsulfaverin/orca/opt/1/1.out'
-
+orca_opt_nohup = './Elsulfaverin/orca/opt/1/1.out'
 
 total_energy = 'Total Energy'
-
 with open(orca_opt_nohup) as file:
     list_total_energy = []
     for index, line in enumerate(file):
@@ -20,29 +18,22 @@ key_2 = 'ITERATION0' #до какого удаляем
 idx_2=[x[0] for x in enumerate(list_total_energy) if x[1] == key_2] #список второго ключа
 idx_2.pop(0) #удаляем начальный, тк он не учавсвует в удалении
 
-
-
-
-
-
 for i in range(len(idx_2)):
     del list_total_energy[idx_1[i]:idx_2[i]]
 idx_1=[x[0] for x in enumerate(list_total_energy) if x[1] == key_1]
 del list_total_energy[idx_1[-1]:] #убераем лишние строки
 
-
 '''общий список всех интерекшенов'''
+'''выдает списки с подсписками всех интерекшенов'''
 for i in range(1, len(list_total_energy), 2):
     list_total_energy[i] = float(list_total_energy[i])
 #l = list(map(lambda x,y:[x,y],list_total_energy[::2],list_total_energy[1::2]))
-
-#первый список
-l_first = []
-for i in range(len(list_total_energy)//2):
-    l_first.append(list_total_energy[i])
+l_first = [] #первый список
+for i in range(0, len(list_total_energy)//2, 2):
+    l_first.append([list_total_energy[i], list_total_energy[i+1]])
 l_end = [] #конечный список
-for i in range(len(list_total_energy)//2 + 1, len(list_total_energy)):
-    l_end.append(list_total_energy[i]) #разбили последний и первый
+for i in range(len(list_total_energy)//2, len(list_total_energy) - 1, 2):
+    l_end.append([list_total_energy[i], list_total_energy[i+1]]) #разбили последний и первый
 list_total_energy.clear()
 start_line_energy = [] #Список сокращенных интеракшенов, приводим к общему виду
 with open(orca_opt_nohup) as file:
@@ -59,46 +50,47 @@ with open(orca_opt_nohup) as file:
             if 'Restarting incremental' not in line:
                 line = line.strip().split(' ')
                 line = ' '.join(line[:3])
-                line = 'ITERATION' + line
+                index = line.find(' ')
+                line = 'ITERATION' + str(int(line[:3]) - 1) + line[index + 1:]
                 energy.append(line)
-
 l_intermediate = []
 for i in energy:
     l_intermediate.append(i.split())
-print(l_intermediate)
+for i in range(len(l_intermediate)):
+    l_intermediate[i][1] = float(l_intermediate[i][1])
 list_total_energy = l_first + l_intermediate + l_end
-#print(list_total_energy)
-for i in range(1, len(list_total_energy), 2):  # Начинаем с 1 и пропускаем каждую вторую строку
-        list_total_energy[i] = float(list_total_energy[i])  # Преобразуем строку в число
-#print(list_total_energy)
-
-'''словари'''
-# dict_total_energy={}
-# for i in list_total_energy:
-#     dict_total_energy = {item[0]: item[1:] for item in list_total_energy}
-# print(dict_total_energy)
-
-# l1 = list(map(lambda x,y:[x,y],list_total_energy[::2],list_total_energy[1::2]))
-# dict_={}
-# for i in l1:
-#     dict_.setdefault(i[0], []).append(i[1])
-# print(dict_)
-
-
-
-
-
-
-
+del l_first, l_end, l_intermediate
+# получили один огромный список интерекшенов
+list_total_energy_def = []
+current_list = []
+for i in range(len(list_total_energy)):
+    if list_total_energy[i][0] == "ITERATION0":
+        if current_list:
+            list_total_energy_def.append(current_list)
+        current_list = [list_total_energy[i]]
+    else:
+        current_list.append(list_total_energy[i])
+if current_list:
+    list_total_energy_def.append(current_list)
+for i in list_total_energy_def:
+    for k in range(len(i)):
+        i[k] = i[k][1]
+del current_list, list_total_energy
+final_list_energy = [] #вытаскиваем последние энергии
+for i in list_total_energy_def:
+    final_list_energy.append(i[-1])
 '''Список списков координат'''
 start_line_coord = []
 end_line_coord = []
+total_time = ''
 with open(orca_opt_nohup) as file:
     for index, k in enumerate(file):
         if 'CARTESIAN COORDINATES (ANGSTROEM)' in k:
             start_line_coord.append(index)
         if 'CARTESIAN COORDINATES (A.U.)' in k:
             end_line_coord.append(index)
+        if 'TOTAL RUN TIME: ' in k:
+            total_time = k[16:-1]
 with open(orca_opt_nohup, 'r') as file:
     lines = file.readlines()
     coord = []
@@ -113,22 +105,51 @@ value = '----------------------------\n'
 for item in input_list:
     if item == value:
         if current_sublist:  # Если текущий подсписок не пуст, добавляем его в результат
+            del current_sublist[-1]
             list_CARTESIAN_COORDINATES.append(current_sublist)
+
             current_sublist = []  # Обнуляем текущий подсписок
     else:
         current_sublist.append(item)
 if current_sublist: # Добавляем последний подсписок, если он не пуст
     list_CARTESIAN_COORDINATES.append(current_sublist)
+#разбиваем координаты на списки
+for i in range(len(list_CARTESIAN_COORDINATES)):
+    list_CARTESIAN_COORDINATES[i] = [s.split() for s in list_CARTESIAN_COORDINATES[i]]
+
+
+'''словари'''
+STEP = {} #один большой словарь, где содержатся все ионные шаги
+step_range = []
+for i in range(len(list_total_energy_def)):
+    step_range.append('STEP' + str(i))
+for key, value_1, value_2 in zip(step_range, list_total_energy_def, list_CARTESIAN_COORDINATES):
+    STEP[key] = {
+        "energy": value_1,
+        "coords": value_2
+    }
+#добавляем финальную энергию в подсовари
+for key, subdict in STEP.items():
+    first_key = list(subdict.keys())[0]
+    subdict['final_energy'] = subdict[first_key][-1]
+#добавляем финальный подсловарь
+final_miny_dict = {
+    "total_time": total_time,
+    "final_energy": final_list_energy,
+    "final_coords": list_CARTESIAN_COORDINATES[-1]
+}
+STEP['final_data'] = final_miny_dict
+print(STEP)
 
 
 
-# for item in energy:
-#     # Пытаемся найти подстроку и число в строке
-#     parts = item.rsplit(' ', 1)  # Разбиваем с конца на две части
-#     if len(parts) == 2: #Делим строку из интерекшенов на подсписки с числом и ITERATION
-#         substring = parts[0]  # Подстрока
-#         number = parts[1]  # Число в виде строки
-#         l_intermediate.append([substring, float(number)])
+
+
+
+
+
+
+
 
 
 
