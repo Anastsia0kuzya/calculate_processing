@@ -79,6 +79,17 @@ del current_list, list_total_energy
 final_list_energy = [] #вытаскиваем последние энергии
 for i in list_total_energy_def:
     final_list_energy.append(i[-1])
+
+#определяем финальную энергию
+final_energy = float('inf')  # Инициализируем с бесконечности
+final_energy_index = (-1)  # Кортеж для хранения индексов (индекс в основном списке, индекс в подсписке)
+for i, sublist in enumerate(list_total_energy_def):
+    for j, value in enumerate(sublist):
+        if value < final_energy:  # Проверяем, если текущее значение меньше минимального
+            final_energy = value
+            final_energy_index = (i)  # Сохраняем индексы
+
+
 '''Список списков координат'''
 start_line_coord = []
 end_line_coord = []
@@ -116,6 +127,7 @@ if current_sublist: # Добавляем последний подсписок, 
 #разбиваем координаты на списки
 for i in range(len(list_CARTESIAN_COORDINATES)):
     list_CARTESIAN_COORDINATES[i] = [s.split() for s in list_CARTESIAN_COORDINATES[i]]
+final_coord = list_CARTESIAN_COORDINATES[5]
 
 
 '''словари'''
@@ -132,11 +144,11 @@ for key, value_1, value_2 in zip(step_range, list_total_energy_def, list_CARTESI
 for key, subdict in STEP.items():
     first_key = list(subdict.keys())[0]
     subdict['final_energy'] = subdict[first_key][-1]
-#добавляем финальный подсловарь
+#добавляем финальный подсловарь !!!тут переписать, тк надо смотреть не по минимальной энергии, а по силе, хз как это в файле найти 
 final_miny_dict = {
     "total_time": total_time,
-    "final_energy": final_list_energy,
-    "final_coords": list_CARTESIAN_COORDINATES[-1]
+    "final_energy": final_energy,
+    "final_coords": final_coord
 }
 STEP['final_data'] = final_miny_dict
 print(STEP)
