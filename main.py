@@ -1,6 +1,5 @@
 import linecache
 import re
-#orca_opt_nohup = './Elsulfaverin/orca/opt/1/1.out'
 def energy_ORCA(orca_opt_nohup):
 # TODO:выводит список энергий каждого большого и маленького шага
     total_energy = 'Total Energy'
@@ -49,8 +48,9 @@ def energy_ORCA(orca_opt_nohup):
                     line = line.strip().split(' ')
                     line = ' '.join(line[:3])
                     index = line.find(' ')
-                    line = 'ITERATION' + str(int(line[:3]) - 1) + line[index + 1:]
-                    energy.append(line)
+                    while line[0].isdigit():
+                        line = 'ITERATION' + str(int(line[:3]) - 1) + line[index + 1:]
+                        energy.append(line)
     l_intermediate = []
     for i in energy:
         l_intermediate.append(i.split())
@@ -77,17 +77,7 @@ def energy_ORCA(orca_opt_nohup):
     final_list_energy = [] #вытаскиваем последние энергии
     for i in list_total_energy_def:
         final_list_energy.append(i[-1])
-
-    '''Находит финальную энергию'''
-    # TODO: надо переделать, тк на данный момент выводит минимальную энергию, а надо финальную(найти в файле, где записан финальный вариант)
-    final_energy = float('inf')
-    final_energy_index = (-1)
-    for i, sublist in enumerate(list_total_energy_def):
-        for j, value in enumerate(sublist):
-            if value < final_energy:
-                final_energy = value
-                final_energy_index = (i)  # Сохраняем индексы
-    return list_total_energy_def, final_energy, final_energy_index
+    return list_total_energy_def
 
 
 def coords_ORCA(orca_opt_nohup):
@@ -132,11 +122,43 @@ def coords_ORCA(orca_opt_nohup):
     final_coord = list_CARTESIAN_COORDINATES[5]
     return list_CARTESIAN_COORDINATES, total_time, final_coord
 
+def final_values(orca_opt_nohup):
+    final_total_energy_val = [] #список значений для последнего списка
+    all_energy = []
+    with open(orca_opt_nohup) as file:
+        for k in file:
+            if 'FINAL SINGLE POINT ENERGY ' in k:
+                final_total_energy_val.append(k)
+            if "Electronic energy" in k:
+                all_energy.append(k.strip())
+            if "Zero point energy " in k:
+                all_energy.append(k.strip())
+            if "Total Enthalpy " in k:
+                all_energy.append(k.strip())
+            if "Final entropy term" in k:
+                all_energy.append(k.strip())
+            if "Final Gibbs free energy" in k:
+                all_energy.append(k.strip())
+    final_total_energy = float(final_total_energy_val[-1][30:])
+    final_total_energy_val.clear()
+    if len(all_energy) == 5:
+        k = []
+        for i in all_energy:
+            parts = i.split()
+            for part in parts:
+                    k.append(part)
+        all_final_energy = [float(k[3]), float(k[9]), float(k[16]), float(k[22]), float(k[31])]
+        return final_total_energy, all_final_energy
+    else:
+        return final_total_energy, all_energy
+
 
 def dict_ORCA(orca_opt_nohup):
     # TODO: выводит словарь с ионными шагами, большими словами, финальным временем, финальным результатом
-    list_total_energy_def, final_energy = energy_ORCA(orca_opt_nohup)[0], energy_ORCA(orca_opt_nohup)[1]
+    list_total_energy_def = energy_ORCA(orca_opt_nohup)[0], energy_ORCA(orca_opt_nohup)[1]
     list_CARTESIAN_COORDINATES, total_time, final_coord = coords_ORCA(orca_opt_nohup)[0], coords_ORCA(orca_opt_nohup)[1], coords_ORCA(orca_opt_nohup)[2]
+    final_energy = final_values(orca_opt_nohup)[0]
+    all_final_energy = final_values(orca_opt_nohup)[1]
     '''словари'''
     STEP = {} #один большой словарь, где содержатся все ионные шаги
     step_range = []
@@ -151,24 +173,37 @@ def dict_ORCA(orca_opt_nohup):
     for key, subdict in STEP.items():
         first_key = list(subdict.keys())[0]
         subdict['final_energy'] = subdict[first_key][-1]
-    #добавляем финальный подсловарь !!!тут переписать, тк надо смотреть не по минимальной энергии, а по силе, хз как это в файле найти
-    final_miny_dict = {
+    #добавляем финальный подсловарь
+    if len(all_final_energy) == 5:
+        final_miny_dict = {
+            "total_time": total_time,
+            "final_energy": final_energy,
+            "electronic_energy": all_final_energy[0],
+            "zero_point_energy": all_final_energy[1],
+            "final_enthalpy": all_final_energy[2],
+            "final_entropy": all_final_energy[3],
+            "final_gibbs_free_energy": all_final_energy[4]
+        }
+    else:
+        final_miny_dict = {
         "total_time": total_time,
         "final_energy": final_energy,
-        "final_coords": final_coord
-    }
+        }
     STEP['final_data'] = final_miny_dict
     print(STEP)
     return STEP
 
 def main(file_path: str):
-    if 'orca' in file_path:
-        dict_coord_and_energy = dict_ORCA(file_path)
-    print(dict_coord_and_energy)
+    dict_ORCA(file_path)
+    # if 'orca' in file_path:
+    # #     dict_coord_and_energy = dict_ORCA(file_path)
+    # # print(dict_coord_and_energy)
+    #     final_values(file_path)
 
 
 if __name__ == '__main__':
-    orca_opt_nohup = './Elsulfaverin/orca/opt/1/1.out'
+    #orca_opt_nohup = './Elsulfaverin/orca/opt/1/1.out'
+    orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/orca230505/1/1.out'
     main(orca_opt_nohup)
 
 
