@@ -29,7 +29,7 @@ def energy_ORCA(orca_opt_nohup):
     for i in range(0, len(list_total_energy)//2, 2):
         l_first.append([list_total_energy[i], list_total_energy[i+1]])
     l_end = [] #конечный список
-    for i in range(len(list_total_energy)//2, len(list_total_energy) - 1, 2):
+    for i in range(len(list_total_energy)//2 + 1, len(list_total_energy) - 1, 2):
         l_end.append([list_total_energy[i], list_total_energy[i+1]]) #разбили последний и первый
     list_total_energy.clear()
     start_line_energy = [] #Список сокращенных интеракшенов, приводим к общему виду
@@ -76,7 +76,8 @@ def energy_ORCA(orca_opt_nohup):
     del current_list, list_total_energy
     final_list_energy = [] #вытаскиваем последние энергии
     for i in list_total_energy_def:
-        final_list_energy.append(i[-1])
+        if i is not str:
+            final_list_energy.append(i[-1])
     return list_total_energy_def
 
 
@@ -193,18 +194,55 @@ def dict_ORCA(orca_opt_nohup):
     print(STEP)
     return STEP
 
+
+def energy_GAUSSIAN(guassian_opt_nohup):
+    with open(guassian_opt_nohup) as file:
+        list_total_energy = []
+        for line in file:
+            if ' Iteration ' in line and 'EE' in line:
+                k = line.split()[0] + line.split()[1] + ' ' + line.split()[3]
+                list_total_energy.append(k)
+    '''Делаем список с подсписками интерекшенов каждого шага'''
+    list_total_energy_fin = []
+    current_subscription = []
+    for string in list_total_energy:
+        # Проверяем, начинается ли строка с определенного значения
+        if string.startswith("Iteration1 "):
+            if current_subscription:
+                list_total_energy_fin.append(current_subscription)
+                current_subscription = []
+            current_subscription.append(string)  # Добавляем значение подписки в подсписок
+        else:
+            current_subscription.append(string)  # Добавляем строку в текущий подписку
+    if current_subscription:
+        list_total_energy_fin.append(current_subscription)  # Не забываем добавить последнюю подписку
+    del current_subscription, list_total_energy
+    for i in list_total_energy_fin:
+        for t in range(len(i)):
+            val = float(i[t].split()[1])
+            i[t] = val
+    print(len(list_total_energy_fin))
+
+
+
+
 def main(file_path: str):
-    dict_ORCA(file_path)
+    energy_GAUSSIAN(file_path)
+    #energy_ORCA(file_path)
     # if 'orca' in file_path:
-    # #     dict_coord_and_energy = dict_ORCA(file_path)
-    # # print(dict_coord_and_energy)
-    #     final_values(file_path)
+    #     dict_coord_and_energy = dict_ORCA(file_path)
+    #     #print(dict_coord_and_energy)
+    # if 'log' in file_path:
+    #     dict_coord_and_energy
+
 
 
 if __name__ == '__main__':
     #orca_opt_nohup = './Elsulfaverin/orca/opt/1/1.out'
-    orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/orca230505/1/1.out'
-    main(orca_opt_nohup)
+    #orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/orca230505/1/1.out'
+    guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
+    main(guassian_opt_nohup)
+    #main(orca_opt_nohup)
 
 
 
