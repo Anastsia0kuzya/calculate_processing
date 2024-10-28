@@ -196,12 +196,14 @@ def dict_ORCA(orca_opt_nohup):
 
 
 def energy_GAUSSIAN(guassian_opt_nohup):
+#TODO: выводит список энергий по каждому шагу
     with open(guassian_opt_nohup) as file:
         list_total_energy = []
         for line in file:
             if ' Iteration ' in line and 'EE' in line:
                 k = line.split()[0] + line.split()[1] + ' ' + line.split()[3]
                 list_total_energy.append(k)
+
     '''Делаем список с подсписками интерекшенов каждого шага'''
     list_total_energy_fin = []
     current_subscription = []
@@ -211,23 +213,63 @@ def energy_GAUSSIAN(guassian_opt_nohup):
             if current_subscription:
                 list_total_energy_fin.append(current_subscription)
                 current_subscription = []
-            current_subscription.append(string)  # Добавляем значение подписки в подсписок
+            current_subscription.append(string)
         else:
-            current_subscription.append(string)  # Добавляем строку в текущий подписку
+            current_subscription.append(string)
     if current_subscription:
-        list_total_energy_fin.append(current_subscription)  # Не забываем добавить последнюю подписку
+        list_total_energy_fin.append(current_subscription)
     del current_subscription, list_total_energy
     for i in list_total_energy_fin:
         for t in range(len(i)):
             val = float(i[t].split()[1])
             i[t] = val
     print(len(list_total_energy_fin))
+    return list_total_energy_fin
 
+def coords_GAUSSIAN(guassian_opt_nohup):
+    start_line_coord = []
+    end_line_coord = []
+    '''Вытаскиваем из файла координаты'''
+    with open(guassian_opt_nohup) as file:
+        for index, k in enumerate(file):
+            if 'Standard orientation:' in k:
+                start_line_coord.append(index)
+            if ' Rotational constants ' in k:
+                end_line_coord.append(index)
+    with open(guassian_opt_nohup, 'r') as file:
+        lines = file.readlines()
+        coord = []
+        # Считываем нужные строки (корректируем номера строк для индексации с 0)
+        for i in range(len(start_line_coord)):
+            for line_coord in lines[start_line_coord[i] + 5:end_line_coord[i]]:
+                coord.append(line_coord)
 
+    '''Разделяем координаты на списки для каждого шага'''
+    list_COORDINATES = []
+    current_sublist = []
+    value = ' ---------------------------------------------------------------------\n'
+    for item in coord:
+        if item != value:
+            current_sublist.append(item)
+        else:
+            list_COORDINATES.append(current_sublist)
+            current_sublist = []
+
+    '''Разбиваем на подсписки, содержащие X, Y, Z'''
+    for i in list_COORDINATES:
+        for k in range(len(i)):
+            i[k] = i[k].split()[1:2] + i[k].split()[3:]
+    #делаем координаты не строками
+    for i in list_COORDINATES:
+        for k in range(len(i)):
+            i[k][1] = float(i[k][1])
+            i[k][2] = float(i[k][2])
+            i[k][3] = float(i[k][3])
+    return list_COORDINATES
 
 
 def main(file_path: str):
-    energy_GAUSSIAN(file_path)
+    coords_GAUSSIAN(file_path)
     #energy_ORCA(file_path)
     # if 'orca' in file_path:
     #     dict_coord_and_energy = dict_ORCA(file_path)
