@@ -179,7 +179,7 @@ def dict_ORCA(orca_opt_nohup):
     list_total_energy_def = energy_ORCA(orca_opt_nohup)[0], energy_ORCA(orca_opt_nohup)[1]
     list_CARTESIAN_COORDINATES, total_time, final_coord = coords_ORCA(orca_opt_nohup)[0], coords_ORCA(orca_opt_nohup)[1], coords_ORCA(orca_opt_nohup)[2]
     final_energy = final_energy_ORCA(orca_opt_nohup)[0]
-    all_final_energy = ffinal_energy_ORCA(orca_opt_nohup)[1]
+    all_final_energy = final_energy_ORCA(orca_opt_nohup)[1]
     '''словари'''
     STEP = {} #один большой словарь, где содержатся все ионные шаги
     step_range = []
@@ -314,10 +314,28 @@ def dict_GAUSSIAM(guassian_opt_nohup):
     print(STEP)
 
 
+def energy_XTB(xtb_opt_nohub):
+    # TODO: выводит список энергий по каждому шагу + финальная энергия
+    list_total_energy = []
+    final_energy = ''
+    with open(xtb_opt_nohub, 'r', encoding='utf-8') as file:
+        start_reading = False
+        for line in file:
+            if "TOTAL ENERGY" in line:
+                final_energy = float(line.strip()[27:45])
+            if ".............................. CYCLE  " in line:
+                start_reading = True
+                continue
+            if ' * total energy  :' not in line:
+                continue
+            if start_reading:
+                list_total_energy.append(float(line.strip()[19:32]))
+    return list_total_energy, final_energy
+
 def main(file_path: str):
+    energy_XTB(file_path)
     #dict_GAUSSIAM(file_path)
-    #coords_GAUSSIAN(file_path)
-    dict_ORCA(file_path)
+    #dict_ORCA(file_path)
     # if 'orca' in file_path:
     #     dict_coord_and_energy = dict_ORCA(file_path)
     #     #print(dict_coord_and_energy)
@@ -326,11 +344,11 @@ def main(file_path: str):
 
 
 if __name__ == '__main__':
-    #orca_opt_nohup = './Elsulfaverin/orca/opt/1/1.out'
-    orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/orca230505/1/1.out'
+    #orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/orca230505/1/1.out'
     #guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
+    xtb_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/6LUD.out'
     #main(guassian_opt_nohup)
-    main(orca_opt_nohup)
+    main(xtb_opt_nohup)
 
 
 
