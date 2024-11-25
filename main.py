@@ -394,14 +394,15 @@ def dict_XTB(xtb_opt_nohub):
 
 
 def main(file_path: str):
-    dict_XTB(file_path)
-    #dict_GAUSSIAM(file_path)
-    #dict_ORCA(file_path)
-    # if 'orca' in file_path:
-    #     dict_coord_and_energy = dict_ORCA(file_path)
-    #     #print(dict_coord_and_energy)
-    # if 'log' in file_path:
-    #     dict_coord_and_energy
+    with open(file_path) as file:
+        for line in file:
+            if 'O   R   C   A' in line:
+                dict_ORCA(file_path)
+            if 'gaussian' in line:
+                dict_GAUSSIAM(file_path)
+            if 'x T B' in line:
+                dict_XTB(file_path)
+
 
 
 if __name__ == '__main__':
