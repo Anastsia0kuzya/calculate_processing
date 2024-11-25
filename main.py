@@ -84,14 +84,12 @@ def energy_ORCA(orca_opt_nohup):
     return list_total_energy_def
 
 
-def symbol_to_atomic(list_values):
+
+def symbol_to_atomic(atom):
     #TODO: преобразует симолы эллементов в атомные нормера (подхидт только для тройного списка, где элемент на 0 позиции)
-    for s in list_values:
-        for k in s:
-            for i in range(len(k)):
-                if k[i] in atomic_number:
-                    k[i] = atomic_number[k[i]][0];
-    return list_values
+    if atom in atomic_number:
+        number = atomic_number[atom][0]
+    return number
 
 
 def coords_ORCA(orca_opt_nohup):
@@ -139,7 +137,9 @@ def coords_ORCA(orca_opt_nohup):
             k[2] = float(k[2])
             k[3] = float(k[3])
     if list_CARTESIAN_COORDINATES[0][0][0] is not int:
-        list_CARTESIAN_COORDINATES = symbol_to_atomic(list_CARTESIAN_COORDINATES)
+        for i in list_CARTESIAN_COORDINATES:
+            for k in i:
+                k[0] = symbol_to_atomic(k[0])
     final_coord = list_CARTESIAN_COORDINATES[5]
     return list_CARTESIAN_COORDINATES, total_time, final_coord
 
@@ -352,11 +352,22 @@ def coord_XTB(xtb_opt_nohub):
             if "END" in line:
                 start = False
             if start:
-                list_COORDINATES.append(line.strip()[31:54])
+                list_COORDINATES.append(line.strip()[31:84])
     list_COORDINATES.pop(0)
-    list_CARTESIAN_COORDINATES =  [s.split() for s in list_COORDINATES]
+    list_CARTESIAN = []
+    for r in list_COORDINATES:
+        if (len(r) != 0):
+            list_CARTESIAN.append(r)
+    list_CARTESIAN_COORDINATES =  [s.split() for s in list_CARTESIAN]
     for i in list_CARTESIAN_COORDINATES:
-        for k in range(len(i)):
+        del i[3:5]
+    """Перетаскивает элемент атом в начало списка и делает числом координаты"""
+    for i in list_CARTESIAN_COORDINATES:
+        atom = i.pop()
+        i.insert(0, atom)
+    for i in list_CARTESIAN_COORDINATES:
+        i[0] = symbol_to_atomic(i[0])
+        for k in range(1, len(i)):
             i[k] = float(i[k])
     return list_CARTESIAN_COORDINATES, cpu_time
 
@@ -395,7 +406,7 @@ def main(file_path: str):
 
 if __name__ == '__main__':
     #orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/orca230505/1/1.out'
-    #guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
+    guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
     xtb_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/6LUD.out'
     #main(orca_opt_nohup)
     #main(guassian_opt_nohup)
