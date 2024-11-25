@@ -2,7 +2,7 @@ import linecache
 import re
 import atomic_number as at
 atomic_number = at.atomic_number
-
+from itertools import islice
 def energy_ORCA(orca_opt_nohup):
 # TODO:выводит список энергий каждого большого и маленького шага
     total_energy = 'Total Energy'
@@ -298,7 +298,6 @@ def dict_GAUSSIAM(guassian_opt_nohup):
     final_energy = energy_GAUSSIAN(guassian_opt_nohup)[1]
     list_coord = coords_GAUSSIAN(guassian_opt_nohup)[0]
     total_time = coords_GAUSSIAN(guassian_opt_nohup)[1]
-    print (len(list_energy), len(list_coord))
     for i in range(len(list_energy)):
         step_range.append('STEP' + str(i))
     for key, value_1, value_2 in zip(step_range, list_energy, list_coord):
@@ -312,6 +311,7 @@ def dict_GAUSSIAM(guassian_opt_nohup):
         }
     STEP['final_data'] = final_miny_dict
     print(STEP)
+    return STEP
 
 
 def energy_XTB(xtb_opt_nohub):
@@ -332,8 +332,58 @@ def energy_XTB(xtb_opt_nohub):
                 list_total_energy.append(float(line.strip()[19:32]))
     return list_total_energy, final_energy
 
+def coord_XTB(xtb_opt_nohub):
+    list_COORDINATES = []
+    start = False
+    time = False
+    with open(xtb_opt_nohub, 'r', encoding='utf-8') as file:
+        for line in file:
+            if "total:" in line:
+                time = True
+                continue
+            if time:
+                if " *  cpu-time:" in line:
+                    cpu_time = line.strip()[17:]
+            if "ratio c/w: " in line:
+                time = False
+            if "final structure:" in line:
+                start = True
+                continue
+            if "END" in line:
+                start = False
+            if start:
+                list_COORDINATES.append(line.strip()[31:54])
+    list_COORDINATES.pop(0)
+    list_CARTESIAN_COORDINATES =  [s.split() for s in list_COORDINATES]
+    for i in list_CARTESIAN_COORDINATES:
+        for k in range(len(i)):
+            i[k] = float(i[k])
+    return list_CARTESIAN_COORDINATES, cpu_time
+
+def dict_XTB(xtb_opt_nohub):
+    STEP = {}  # один большой словарь, где содержатся все ионные шаги
+    step_range = []
+    list_energy = energy_XTB(xtb_opt_nohub)[0]
+    final_energy = energy_XTB(xtb_opt_nohub)[1]
+    list_final_coord = coord_XTB(xtb_opt_nohub)[0]
+    final_time = coord_XTB(xtb_opt_nohub)[1]
+    for i in range(len(list_energy)):
+        step_range.append('STEP' + str(i))
+    for key, value_1 in zip(step_range, list_energy):
+        STEP[key] = {
+            "energy": value_1,
+        }
+    STEP["final_coord"] = list_final_coord
+    final_miny_dict = {
+        "final_energy": final_energy,
+        "total_time": final_time
+    }
+    STEP['final_data'] = final_miny_dict
+    print(STEP)
+
+
 def main(file_path: str):
-    energy_XTB(file_path)
+    dict_XTB(file_path)
     #dict_GAUSSIAM(file_path)
     #dict_ORCA(file_path)
     # if 'orca' in file_path:
@@ -347,8 +397,10 @@ if __name__ == '__main__':
     #orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/orca230505/1/1.out'
     #guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
     xtb_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/6LUD.out'
+    #main(orca_opt_nohup)
     #main(guassian_opt_nohup)
     main(xtb_opt_nohup)
+
 
 
 
