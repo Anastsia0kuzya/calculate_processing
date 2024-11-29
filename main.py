@@ -211,7 +211,9 @@ def dict_ORCA(orca_opt_nohup):
         "final_energy": final_energy,
         }
     STEP['final_data'] = final_miny_dict
-    print(STEP)
+    #print(STEP)
+    print("ORCA STOP")
+
     return STEP
 
 
@@ -310,7 +312,8 @@ def dict_GAUSSIAM(guassian_opt_nohup):
         "total_time": total_time,
         }
     STEP['final_data'] = final_miny_dict
-    print(STEP)
+    #print(STEP)
+    print("GAUSSIAN STOP")
     return STEP
 
 
@@ -390,28 +393,35 @@ def dict_XTB(xtb_opt_nohub):
         "total_time": final_time
     }
     STEP['final_data'] = final_miny_dict
-    print(STEP)
+    #print(STEP)
+    print("XTB STOP")
+    return STEP
 
 
-def main(file_path: str):
-    with open(file_path) as file:
-        for line in file:
-            if 'O   R   C   A' in line:
-                dict_ORCA(file_path)
-            if 'gaussian' in line:
-                dict_GAUSSIAM(file_path)
-            if 'x T B' in line:
-                dict_XTB(file_path)
-
+def main(file_list: list):
+    result_process = []
+    for file_open in file_list:
+        with open(file_open, 'r') as file:
+            for line in file:
+                if 'O   R   C   A' in line:
+                    result_process.append("ORCA:")
+                    result_process.append(dict_ORCA(file_open))
+                if 'Entering Gaussian System' in line:
+                    result_process.append("GAUSSIAN:")
+                    result_process.append(dict_GAUSSIAM(file_open))
+                if '        x T B        ' in line:
+                    result_process.append("XTB:")
+                    result_process.append(dict_XTB(file_open))
+    return result_process
 
 
 if __name__ == '__main__':
-    #orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/orca230505/1/1.out'
+    orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/Elsulfaverin/orca/opt/1/1.out'
     guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
     xtb_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/6LUD.out'
-    #main(orca_opt_nohup)
-    #main(guassian_opt_nohup)
-    main(xtb_opt_nohup)
+    file_list = [orca_opt_nohup, guassian_opt_nohup, xtb_opt_nohup]
+    print(main(file_list))
+
 
 
 
