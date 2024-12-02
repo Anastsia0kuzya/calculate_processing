@@ -2,6 +2,7 @@ import linecache
 import re
 import os
 import csv
+
 import atomic_number as at
 atomic_number = at.atomic_number
 from itertools import islice
@@ -323,11 +324,13 @@ def energy_XTB(xtb_opt_nohub):
     # TODO: выводит список энергий по каждому шагу + финальная энергия
     list_total_energy = []
     final_energy = ''
+    enerdy_for_coord = ''
     with open(xtb_opt_nohub, 'r', encoding='utf-8') as file:
         start_reading = False
         for line in file:
             if "TOTAL ENERGY" in line:
                 final_energy = float(line.strip()[27:45])
+                enerdy_for_coord = float(line.strip()[27:39])
             if ".............................. CYCLE  " in line:
                 start_reading = True
                 continue
@@ -335,7 +338,7 @@ def energy_XTB(xtb_opt_nohub):
                 continue
             if start_reading:
                 list_total_energy.append(float(line.strip()[19:32]))
-    return list_total_energy, final_energy
+    return list_total_energy, final_energy, enerdy_for_coord
 
 def coord_XTB(xtb_opt_nohub):
     list_COORDINATES = []
@@ -381,15 +384,22 @@ def dict_XTB(xtb_opt_nohub):
     step_range = []
     list_energy = energy_XTB(xtb_opt_nohub)[0]
     final_energy = energy_XTB(xtb_opt_nohub)[1]
+    energy_for_coord = energy_XTB(xtb_opt_nohub)[2]
     list_final_coord = coord_XTB(xtb_opt_nohub)[0]
     final_time = coord_XTB(xtb_opt_nohub)[1]
     for i in range(len(list_energy)):
         step_range.append('STEP' + str(i))
     for key, value_1 in zip(step_range, list_energy):
-        STEP[key] = {
-            "energy": value_1,
-        }
-    STEP["final_coord"] = list_final_coord
+        if value_1 == energy_for_coord:
+            STEP[key] = {
+                "energy": value_1,
+                "coords": list_final_coord
+            }
+        else:
+            STEP[key] = {
+                "energy": value_1,
+                "coords": 0
+            }
     final_miny_dict = {
         "final_energy": final_energy,
         "total_time": final_time
@@ -400,45 +410,32 @@ def dict_XTB(xtb_opt_nohub):
     return STEP
 
 
-import csv
+def write_to_csv(result_process, results_csv):
 
-def flatten_dict(d, parent_key='', sep='_'):
-    """
-    Рекурсивно преобразует вложенный словарь в плоский словарь.
-    """
-    items = {}
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.update(flatten_dict(v, new_key, sep=sep))
-        else:
-            items[new_key] = v
-    return items
+    with open(results_csv, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
 
-def write_to_csv(data, filename):
-    """
-    Записывает список словарей в CSV файл.
-    """
-    # Преобразуем каждый словарь в плоский
-    flattened_data = [flatten_dict(item) for item in data]
+        # Переменные для отслеживания текущей секции
+        current_section = ""
 
-    # Получаем все уникальные ключи
-    fieldnames = set()
-    for item in flattened_data:
-        fieldnames.update(item.keys())
-    fieldnames = list(fieldnames)
+        # Обрабатываем элементы списка
+        for item in result_process:
+            if isinstance(item, str):
+                # Если это строка, то устанавливаем текущую секцию
+                current_section = item
+            elif isinstance(item, dict):
+                # Если это словарь, то обрабатываем его
+                for key, subdict in item.items():
+                    # Записываем заголовок секции
+                    writer.writerow([current_section, key])
 
-    # Записываем в CSV
-    with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        for item in flattened_data:
-            writer.writerow(item)
+                    # Записываем данные подсловаря
+                    for subkey, values in subdict.items():
+                        # Создаем строку с заголовками
+                        row = [subkey] + [values]
+                        writer.writerow(row)
 
-
-
-
-
+    print("Данные успешно записаны в output.csv")
 
 
 def main(file_list: list):
@@ -447,13 +444,13 @@ def main(file_list: list):
         with open(file_open, 'r') as file:
             for line in file:
                 if 'O   R   C   A' in line:
-                    #result_process.append("ORCA:")
+                    result_process.append("ORCA:")
                     result_process.append(dict_ORCA(file_open))
                 if 'Entering Gaussian System' in line:
-                    #result_process.append("GAUSSIAN:")
+                    result_process.append("GAUSSIAN:")
                     result_process.append(dict_GAUSSIAM(file_open))
                 if '        x T B        ' in line:
-                    #result_process.append("XTB:")
+                    result_process.append("XTB:")
                     result_process.append(dict_XTB(file_open))
 
     #print(result_process)
@@ -467,7 +464,7 @@ if __name__ == '__main__':
     guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
     xtb_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/6LUD.out'
     file_list = [orca_opt_nohup, guassian_opt_nohup, xtb_opt_nohup]
-    print(main(file_list))
+    main(file_list)
 
 
 
