@@ -410,32 +410,37 @@ def dict_XTB(xtb_opt_nohub):
     return STEP
 
 
-def write_to_csv(result_process, results_csv):
 
-    with open(results_csv, mode='w', newline='', encoding='utf-8') as file:
+
+
+def flatten_dict(prefix, d):
+    """Функция для распаковки словарей."""
+    flat_items = []
+    for k, v in d.items():
+        if isinstance(v, dict):
+            # Если значение - это словарь, рекурсивно распаковываем
+            flat_items.extend(flatten_dict(f"{prefix}.{k}", v))
+        else:
+            # Если значение - не словарь, добавляем в список
+            flat_items.append((f"{prefix}.{k}", v))
+    return flat_items
+
+def write_to_csv(data, filename):
+    """Функция для записи данных в CSV файл."""
+    with open(filename, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
+        writer.writerow(['parameters', 'value'])  # Заголовки столбцов
 
-        # Переменные для отслеживания текущей секции
-        current_section = ""
+        for i in range(0, len(data), 2):
+            group_name = data[i]  # Получаем название группы
+            dictionary = data[i + 1]  # Получаем соответствующий словарь
 
-        # Обрабатываем элементы списка
-        for item in result_process:
-            if isinstance(item, str):
-                # Если это строка, то устанавливаем текущую секцию
-                current_section = item
-            elif isinstance(item, dict):
-                # Если это словарь, то обрабатываем его
-                for key, subdict in item.items():
-                    # Записываем заголовок секции
-                    writer.writerow([current_section, key])
+            # Распаковываем словарь
+            flat_items = flatten_dict(group_name, dictionary)
+            for param, value in flat_items:
+                writer.writerow([param, value])  # Записываем строки
 
-                    # Записываем данные подсловаря
-                    for subkey, values in subdict.items():
-                        # Создаем строку с заголовками
-                        row = [subkey] + [values]
-                        writer.writerow(row)
 
-    print("Данные успешно записаны в output.csv")
 
 
 def main(file_list: list):
@@ -453,7 +458,7 @@ def main(file_list: list):
                     result_process.append("XTB:")
                     result_process.append(dict_XTB(file_open))
 
-    #print(result_process)
+    print(result_process)
     write_to_csv(result_process, 'results.csv')
 
     return result_process
