@@ -1,5 +1,7 @@
 import linecache
 import re
+import os
+import csv
 import atomic_number as at
 atomic_number = at.atomic_number
 from itertools import islice
@@ -398,20 +400,65 @@ def dict_XTB(xtb_opt_nohub):
     return STEP
 
 
+import csv
+
+def flatten_dict(d, parent_key='', sep='_'):
+    """
+    Рекурсивно преобразует вложенный словарь в плоский словарь.
+    """
+    items = {}
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.update(flatten_dict(v, new_key, sep=sep))
+        else:
+            items[new_key] = v
+    return items
+
+def write_to_csv(data, filename):
+    """
+    Записывает список словарей в CSV файл.
+    """
+    # Преобразуем каждый словарь в плоский
+    flattened_data = [flatten_dict(item) for item in data]
+
+    # Получаем все уникальные ключи
+    fieldnames = set()
+    for item in flattened_data:
+        fieldnames.update(item.keys())
+    fieldnames = list(fieldnames)
+
+    # Записываем в CSV
+    with open(filename, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in flattened_data:
+            writer.writerow(item)
+
+
+
+
+
+
+
 def main(file_list: list):
     result_process = []
     for file_open in file_list:
         with open(file_open, 'r') as file:
             for line in file:
                 if 'O   R   C   A' in line:
-                    result_process.append("ORCA:")
+                    #result_process.append("ORCA:")
                     result_process.append(dict_ORCA(file_open))
                 if 'Entering Gaussian System' in line:
-                    result_process.append("GAUSSIAN:")
+                    #result_process.append("GAUSSIAN:")
                     result_process.append(dict_GAUSSIAM(file_open))
                 if '        x T B        ' in line:
-                    result_process.append("XTB:")
+                    #result_process.append("XTB:")
                     result_process.append(dict_XTB(file_open))
+
+    #print(result_process)
+    write_to_csv(result_process, 'results.csv')
+
     return result_process
 
 
