@@ -2,7 +2,7 @@ import linecache
 import re
 import os
 import csv
-
+import pandas
 import atomic_number as at
 atomic_number = at.atomic_number
 from itertools import islice
@@ -412,33 +412,43 @@ def dict_XTB(xtb_opt_nohub):
 
 
 
-
-def flatten_dict(prefix, d):
-    """Функция для распаковки словарей."""
-    flat_items = []
-    for k, v in d.items():
-        if isinstance(v, dict):
-            # Если значение - это словарь, рекурсивно распаковываем
-            flat_items.extend(flatten_dict(f"{prefix}.{k}", v))
-        else:
-            # Если значение - не словарь, добавляем в список
-            flat_items.append((f"{prefix}.{k}", v))
-    return flat_items
-
+# Функция для записи в CSV
 def write_to_csv(data, filename):
-    """Функция для записи данных в CSV файл."""
-    with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(['parameters', 'value'])  # Заголовки столбцов
+    # Получаем уникальные названия для столбцов
+    column_names = set()
+    for entry in data:
+        for step_key in entry.keys():
+            if 'step' in step_key:
+                for energy_item in entry[step_key]['energy']:
+                    column_names.add(energy_item[0])
 
-        for i in range(0, len(data), 2):
-            group_name = data[i]  # Получаем название группы
-            dictionary = data[i + 1]  # Получаем соответствующий словарь
+    # Добавляем дополнительные ключи
+    column_names.update(['final_energy', 'total_time'])
 
-            # Распаковываем словарь
-            flat_items = flatten_dict(group_name, dictionary)
-            for param, value in flat_items:
-                writer.writerow([param, value])  # Записываем строки
+    # Сортируем столбцы
+    column_names = sorted(column_names)
+
+    # Запись в CSV
+    with open(filename, mode='w', newline='') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=column_names)
+        writer.writeheader()
+
+        for entry in data:
+            row = {key: None for key in column_names}
+            # Заполняем строки данными
+            for step_key in entry.keys():
+                if 'step' in step_key:
+                    energy_list = entry[step_key]['energy']
+                    for energy_item in energy_list:
+                        row[energy_item[0]] = energy_item[1]
+                    row['final_energy'] = entry[step_key]['final_energy']
+
+            # Заполняем финальные данные
+            row['final_energy'] = entry['final_data']['final_energy']
+            row['total_time'] = entry['final_data']['total_time']
+
+            writer.writerow(row)
+
 
 
 
@@ -449,13 +459,13 @@ def main(file_list: list):
         with open(file_open, 'r') as file:
             for line in file:
                 if 'O   R   C   A' in line:
-                    result_process.append("ORCA:")
+                    #result_process.append("ORCA:")
                     result_process.append(dict_ORCA(file_open))
                 if 'Entering Gaussian System' in line:
-                    result_process.append("GAUSSIAN:")
+                    #result_process.append("GAUSSIAN:")
                     result_process.append(dict_GAUSSIAM(file_open))
                 if '        x T B        ' in line:
-                    result_process.append("XTB:")
+                    #result_process.append("XTB:")
                     result_process.append(dict_XTB(file_open))
 
     print(result_process)
