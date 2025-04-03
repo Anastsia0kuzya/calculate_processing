@@ -210,13 +210,12 @@ def dict_ORCA(orca_opt_nohup):
         }
     else:
         final_miny_dict = {
-        "total_time": total_time,
         "final_energy": final_energy,
+        "total_time": total_time,
         }
     STEP['final_data'] = final_miny_dict
-    #print(STEP)
-    print("ORCA STOP")
-
+    STEP['name programm'] = 'ORCA'
+    print("ORCA DONE")
     return STEP
 
 
@@ -315,8 +314,9 @@ def dict_GAUSSIAM(guassian_opt_nohup):
         "total_time": total_time,
         }
     STEP['final_data'] = final_miny_dict
+    STEP['name programm'] = 'GAUSSIAN'
     #print(STEP)
-    print("GAUSSIAN STOP")
+    print("GAUSSIAN DONE")
     return STEP
 
 
@@ -392,66 +392,93 @@ def dict_XTB(xtb_opt_nohub):
     for key, value_1 in zip(step_range, list_energy):
         if value_1 == energy_for_coord:
             STEP[key] = {
-                "energy": value_1,
-                "coords": list_final_coord
+                "coords": list_final_coord,
+                "final_energy": value_1,
             }
         else:
             STEP[key] = {
-                "energy": value_1,
-                "coords": 0
+                "coords": 0,
+                "final_energy": value_1,
             }
     final_miny_dict = {
+        "final_coord": list_final_coord,
         "final_energy": final_energy,
-        "total_time": final_time
+        "total_time": final_time,
+
     }
     STEP['final_data'] = final_miny_dict
+    STEP['name programm'] = 'XTB'
     #print(STEP)
-    print("XTB STOP")
+    print("XTB DONE")
     return STEP
 
+def list_for_csv(data):
+    data_for_csv = [['Stage', 'Energy', 'Coords', 'Final energy', 'Total Time', 'name programm']] #ЗАГОЛОВКИ
 
+    for key in data:
+        if "STEP" in key:
+            pr_data_s = []
+            pr_data_s.append(key)
+            for s in data[key]:
+                if data['name programm'] == 'XTB' and data[key][s] == 0:
+                    pr_data_s.append('-')
+                else:
+                    pr_data_s.append(data[key][s])
 
+            pr_data_s.append('-')
+            if data['name programm'] == 'ORCA':
+                pr_data_s.append('ORCA')
+            elif data['name programm'] == 'GAUSSIAN':
+                pr_data_s.append('-')
+                pr_data_s.append('GAUSSIAN')
+            elif data['name programm'] == 'XTB':
+                pr_data_s = pr_data_s[:1] + ['-'] + pr_data_s[1:]
+                pr_data_s.append('XTB')
+            data_for_csv.append(pr_data_s)
 
-# Функция для записи в CSV
-def write_to_csv(data, filename):
-    # Получаем уникальные названия для столбцов
-    column_names = set()
-    for entry in data:
-        for step_key in entry.keys():
-            if 'step' in step_key:
-                for energy_item in entry[step_key]['energy']:
-                    column_names.add(energy_item[0])
+        elif key == "final_data":
+            pr_data_f = ["FINAL", "-"]
+            for f in data[key]:
+                pr_data_f.append(data[key][f])
+            if data['name programm'] == 'ORCA' or data['name programm'] == 'GAUSSIAN':
+                a = []
+                a.append(pr_data_s[-4])
+                pr_data_f = pr_data_f[:2] + a + pr_data_f[2:]
+                if data['name programm'] == 'ORCA':
+                    pr_data_f.append('ORCA')
+                elif data['name programm'] == 'GAUSSIAN':
+                    pr_data_f.append('GAUSSIAN')
+            elif data['name programm'] == 'XTB':
+                pr_data_f.append('XTB')
+            data_for_csv.append(pr_data_f)
+    return data_for_csv
 
-    # Добавляем дополнительные ключи
-    column_names.update(['final_energy', 'total_time'])
+def write_csv(data_for_csv, filename):
+    with open(filename, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerows(data_for_csv) # Записываем данные в файл
 
-    # Сортируем столбцы
-    column_names = sorted(column_names)
+def write_sort_csv(data):
+    final_data_for_csv = [['Stage', 'Coords', 'Final energy', 'Total Time', 'name programm']]
 
-    # Запись в CSV
-    with open(filename, mode='w', newline='') as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=column_names)
-        writer.writeheader()
+    for step in data:
+        data_for_csv = list_for_csv(step)
+        p = []
+        p.append(data_for_csv[-1][0])
+        p = p + data_for_csv[-1][2:]
+        final_data_for_csv.append(p)
+        if step['name programm'] == 'ORCA':
+            write_csv(data_for_csv, 'orca.csv')
+            print("Данные успешно записаны в data.csv для ORCA")
+        elif step['name programm'] == 'GAUSSIAN':
+            write_csv(data_for_csv, 'gaussian.csv')
+            print("Данные успешно записаны в data.csv для GAUSSIAN")
+        elif step['name programm'] == 'XTB':
+            write_csv(data_for_csv, 'xtb.csv')
+            print("Данные успешно записаны в data.csv для XTB")
 
-        for entry in data:
-            row = {key: None for key in column_names}
-            # Заполняем строки данными
-            for step_key in entry.keys():
-                if 'step' in step_key:
-                    energy_list = entry[step_key]['energy']
-                    for energy_item in energy_list:
-                        row[energy_item[0]] = energy_item[1]
-                    row['final_energy'] = entry[step_key]['final_energy']
-
-            # Заполняем финальные данные
-            row['final_energy'] = entry['final_data']['final_energy']
-            row['total_time'] = entry['final_data']['total_time']
-
-            writer.writerow(row)
-
-
-
-
+    write_csv(final_data_for_csv, 'comparison table.csv')
+    print("Финальные данные успешно записаны в comparison table.csv")
 
 def main(file_list: list):
     result_process = []
@@ -468,9 +495,8 @@ def main(file_list: list):
                     #result_process.append("XTB:")
                     result_process.append(dict_XTB(file_open))
 
-    print(result_process)
-    write_to_csv(result_process, 'results.csv')
-
+    #print(result_process)
+    write_sort_csv(result_process)
     return result_process
 
 
