@@ -3,9 +3,20 @@ import re
 import os
 import csv
 import pandas
+import math
 import atomic_number as at
 atomic_number = at.atomic_number
 from itertools import islice
+
+def rmsd(final_energy_list, final_energy):
+# TODO: находит среднеквадратичное отклонение
+    rdsm = 0
+    for i in final_energy_list:
+        rdsm += (i - final_energy)**2
+    rdsm = math.sqrt(rdsm/len(final_energy_list))
+    return rdsm
+
+
 def energy_ORCA(orca_opt_nohup):
 # TODO:выводит список энергий каждого большого и маленького шага
     total_energy = 'Total Energy'
@@ -84,7 +95,11 @@ def energy_ORCA(orca_opt_nohup):
     for i in list_total_energy_def:
         if i is not str:
             final_list_energy.append(i[-1])
-    return list_total_energy_def
+    list_energy = list_total_energy_def[0], list_total_energy_def[1]
+    list_final_steps = []
+    for f in list_energy:
+        list_final_steps.append(f[-1])
+    return list_total_energy_def, list_final_steps
 
 
 
@@ -96,7 +111,7 @@ def symbol_to_atomic(atom):
 
 
 def coords_ORCA(orca_opt_nohup):
-    #TODO: выводит список координат молекулы по каджому большому шагу
+    #TODO: выводит список координат молекулы по каджому большому шагу, время и финальные координаты
     '''Список списков координат'''
     start_line_coord = []
     end_line_coord = []
@@ -172,6 +187,7 @@ def final_energy_ORCA(orca_opt_nohup):
             for part in parts:
                     k.append(part)
         all_final_energy = [float(k[3]), float(k[9]), float(k[16]), float(k[22]), float(k[31])]
+
         return final_total_energy, all_final_energy
     else:
         return final_total_energy, all_energy
@@ -179,7 +195,8 @@ def final_energy_ORCA(orca_opt_nohup):
 
 def dict_ORCA(orca_opt_nohup):
     # TODO: выводит словарь с ионными шагами, большими словами, финальным временем, финальным результатом
-    list_total_energy_def = energy_ORCA(orca_opt_nohup)[0], energy_ORCA(orca_opt_nohup)[1]
+    list_total_energy_def = energy_ORCA(orca_opt_nohup)[0][0], energy_ORCA(orca_opt_nohup)[0][1]
+    list_final_energy_steps = energy_ORCA(orca_opt_nohup)[1]
     list_CARTESIAN_COORDINATES, total_time, final_coord = coords_ORCA(orca_opt_nohup)[0], coords_ORCA(orca_opt_nohup)[1], coords_ORCA(orca_opt_nohup)[2]
     final_energy = final_energy_ORCA(orca_opt_nohup)[0]
     all_final_energy = final_energy_ORCA(orca_opt_nohup)[1]
@@ -214,7 +231,10 @@ def dict_ORCA(orca_opt_nohup):
         "total_time": total_time,
         }
     STEP['final_data'] = final_miny_dict
+    rsdm_orca = rmsd(list_final_energy_steps, final_energy)
+    STEP['standard deviation'] = rsdm_orca
     STEP['name programm'] = 'ORCA'
+    #print(STEP)
     print("ORCA DONE")
     return STEP
 
@@ -248,7 +268,10 @@ def energy_GAUSSIAN(guassian_opt_nohup):
             val = float(i[t].split()[1])
             i[t] = val
     final_energy = list_total_energy_fin[-1][-1]
-    return list_total_energy_fin, final_energy
+    list_final_steps = []
+    for i in list_total_energy_fin:
+        list_final_steps.append(i[-1])
+    return list_total_energy_fin, final_energy, list_final_steps
 
 def coords_GAUSSIAN(guassian_opt_nohup):
     start_line_coord = []
@@ -299,21 +322,26 @@ def dict_GAUSSIAM(guassian_opt_nohup):
     STEP = {}  # один большой словарь, где содержатся все ионные шаги
     step_range = []
     list_energy= energy_GAUSSIAN(guassian_opt_nohup)[0]
+    list_final_for_step_energy = energy_GAUSSIAN(guassian_opt_nohup)[2]
+    #print(list_final_for_step_energy)
     final_energy = energy_GAUSSIAN(guassian_opt_nohup)[1]
     list_coord = coords_GAUSSIAN(guassian_opt_nohup)[0]
     total_time = coords_GAUSSIAN(guassian_opt_nohup)[1]
     for i in range(len(list_energy)):
         step_range.append('STEP' + str(i))
-    for key, value_1, value_2 in zip(step_range, list_energy, list_coord):
+    for key, value_1, value_2, value_3 in zip(step_range, list_energy, list_coord, list_final_for_step_energy):
         STEP[key] = {
             "energy": value_1,
-            "coords": value_2
+            "coords": value_2,
+            "final_energy": value_3
         }
     final_miny_dict = {
         "final_energy": final_energy,
         "total_time": total_time,
         }
     STEP['final_data'] = final_miny_dict
+    rmsd_gaussian = rmsd(list_final_for_step_energy, final_energy)
+    STEP['standard deviation'] = rmsd_gaussian
     STEP['name programm'] = 'GAUSSIAN'
     #print(STEP)
     print("GAUSSIAN DONE")
@@ -407,13 +435,16 @@ def dict_XTB(xtb_opt_nohub):
 
     }
     STEP['final_data'] = final_miny_dict
+    rmsd_xtb = rmsd(list_energy, final_energy)
+    STEP['standard deviation'] = rmsd_xtb
     STEP['name programm'] = 'XTB'
     #print(STEP)
     print("XTB DONE")
     return STEP
 
+
 def list_for_csv(data):
-    data_for_csv = [['Stage', 'Energy', 'Coords', 'Final energy', 'Total Time', 'name programm']] #ЗАГОЛОВКИ
+    data_for_csv = [['Stage', 'Energy', 'Coords', 'Final energy', 'Total Time', 'standard deviation', 'name programm']] #ЗАГОЛОВКИ
 
     for key in data:
         if "STEP" in key:
@@ -426,10 +457,10 @@ def list_for_csv(data):
                     pr_data_s.append(data[key][s])
 
             pr_data_s.append('-')
+            pr_data_s.append('-')
             if data['name programm'] == 'ORCA':
                 pr_data_s.append('ORCA')
             elif data['name programm'] == 'GAUSSIAN':
-                pr_data_s.append('-')
                 pr_data_s.append('GAUSSIAN')
             elif data['name programm'] == 'XTB':
                 pr_data_s = pr_data_s[:1] + ['-'] + pr_data_s[1:]
@@ -440,9 +471,10 @@ def list_for_csv(data):
             pr_data_f = ["FINAL", "-"]
             for f in data[key]:
                 pr_data_f.append(data[key][f])
+            pr_data_f.append(data['standard deviation'])
             if data['name programm'] == 'ORCA' or data['name programm'] == 'GAUSSIAN':
                 a = []
-                a.append(pr_data_s[-4])
+                a.append(pr_data_s[-5])
                 pr_data_f = pr_data_f[:2] + a + pr_data_f[2:]
                 if data['name programm'] == 'ORCA':
                     pr_data_f.append('ORCA')
@@ -459,7 +491,7 @@ def write_csv(data_for_csv, filename):
         writer.writerows(data_for_csv) # Записываем данные в файл
 
 def write_sort_csv(data):
-    final_data_for_csv = [['Stage', 'Coords', 'Final energy', 'Total Time', 'name programm']]
+    final_data_for_csv = [['Stage', 'Coords', 'Final energy', 'Total Time', 'Standard deviation', 'Name programm']]
 
     for step in data:
         data_for_csv = list_for_csv(step)
