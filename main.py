@@ -492,7 +492,7 @@ def write_csv(data_for_csv, filename):
 
 def write_sort_csv(data):
     final_data_for_csv = [['Stage', 'Coords', 'Final energy', 'Total Time', 'Standard deviation', 'Name programm']]
-
+    i = 1
     for step in data:
         data_for_csv = list_for_csv(step)
         p = []
@@ -500,15 +500,15 @@ def write_sort_csv(data):
         p = p + data_for_csv[-1][2:]
         final_data_for_csv.append(p)
         if step['name programm'] == 'ORCA':
-            write_csv(data_for_csv, 'orca.csv')
+            write_csv(data_for_csv, 'orca'+str(i)+'.csv')
             print("Данные успешно записаны в data.csv для ORCA")
         elif step['name programm'] == 'GAUSSIAN':
-            write_csv(data_for_csv, 'gaussian.csv')
+            write_csv(data_for_csv, 'gaussian'+str(i)+'.csv')
             print("Данные успешно записаны в data.csv для GAUSSIAN")
         elif step['name programm'] == 'XTB':
-            write_csv(data_for_csv, 'xtb.csv')
+            write_csv(data_for_csv, 'xtb'+str(i)+'.csv')
             print("Данные успешно записаны в data.csv для XTB")
-
+        i+=1
     write_csv(final_data_for_csv, 'comparison table.csv')
     print("Финальные данные успешно записаны в comparison table.csv")
 
