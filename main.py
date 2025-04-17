@@ -15,29 +15,79 @@ def rmsd(final_energy_list, final_energy):
         rdsm += (i - final_energy)**2
     rdsm = math.sqrt(rdsm/len(final_energy_list))
     return rdsm
+def various(file_path):
+    with open(file_path) as file:
+        version = 0
+        for l in file:
+            if 'Program Version 5' in l:
+                version = 5
+            elif 'Program Version 6' in l:
+                version = 6
+    return version
+
 
 
 def energy_ORCA(orca_opt_nohup):
 # TODO:выводит список энергий каждого большого и маленького шага
     total_energy = 'Total Energy'
+    list_total_energy = []
     with open(orca_opt_nohup) as file:
-        list_total_energy = []
-        for index, line in enumerate(file):
-            if total_energy in line:
-                index -= 1
-                interection = linecache.getline(orca_opt_nohup, index).strip().replace(' ', '').replace('!', '')#форматирую интерекшн
-                list_total_energy.append(interection)
-                list_total_energy.append(line.replace('   Total Energy        :   ', '').replace( 'Eh\n', '').replace(' ', ''))
-    #Определяют границы обрезки
-    key_1 = '----------------' #с какого символа удаляем
-    idx_1=[x[0] for x in enumerate(list_total_energy) if x[1] == key_1] #список первого ключа
-    key_2 = 'ITERATION0' #до какого удаляем
-    idx_2=[x[0] for x in enumerate(list_total_energy) if x[1] == key_2] #список второго ключа
-    idx_2.pop(0) #удаляем начальный, тк он не учавсвует в удалении
-    for i in range(len(idx_2)):
-        del list_total_energy[idx_1[i]:idx_2[i]]
-    idx_1=[x[0] for x in enumerate(list_total_energy) if x[1] == key_1]
-    del list_total_energy[idx_1[-1]:] #убераем лишние строки
+
+        if various(orca_opt_nohup) == 5:
+            for index, line in enumerate(file):
+                if total_energy in line:
+                    index -= 1
+                    interection = linecache.getline(orca_opt_nohup, index).strip().replace(' ', '').replace('!', '')#форматирую интерекшн
+                    list_total_energy.append(interection)
+                    list_total_energy.append(line.replace('   Total Energy        :   ', '').replace( 'Eh\n', '').replace(' ', ''))
+
+            #Определяют границы обрезки
+            key_1 = '----------------' #с какого символа удаляем
+            idx_1=[x[0] for x in enumerate(list_total_energy) if x[1] == key_1] #список первого ключа
+            key_2 = 'ITERATION0' #до какого удаляем
+            idx_2=[x[0] for x in enumerate(list_total_energy) if x[1] == key_2] #список второго ключа
+            idx_2.pop(0) #удаляем начальный, тк он не учавсвует в удалении
+            for i in range(len(idx_2)):
+                del list_total_energy[idx_1[i]:idx_2[i]]
+            idx_1=[x[0] for x in enumerate(list_total_energy) if x[1] == key_1]
+            del list_total_energy[idx_1[-1]:] #убераем лишние строки
+
+        if various(orca_opt_nohup) == 6:
+            pr_list = []
+            #with open(orca_opt_nohup, 'r', encoding='utf-8') as file:
+            start_s = []
+            end_s = []
+            start_symbol = '----------------------------------------D-I-I-S--------------------------------------------'
+            end_symbol = 'SCF CONVERGED AFTER'
+            for index, line in enumerate(file):
+                if start_symbol in line:
+                    start_s.append(index)
+                elif end_symbol in line:
+                    end_s.append(index)
+            with open(orca_opt_nohup, 'r') as file:
+                lines = file.readlines()
+            for i in range(len(start_s)):
+                start_index = start_s[i]
+                end_index = end_s[i]
+                pr_list.append(lines[start_index + 4:end_index - 3])
+            for i in pr_list:
+                for j in i:
+                    # Разделяем строку на части
+                    parts = j.split()
+
+                    for p in range(len(parts)):
+                        try:
+                            # Пробуем преобразовать строку в число
+                            number = int(parts[p])
+
+                            # Проверяем, является ли число натуральным
+                            if number > 0 and number.is_integer():
+                                found_natural = True
+                                list_total_energy.append('ITERATION'+str(int(parts[p]) - 1))  # Добавляем натуральное число
+                                list_total_energy.append(parts[p+1])
+
+                        except ValueError:
+                            continue  # Игнорируем строки, которые не могут быть преобразованы в число
 
     '''выдает списки с подсписками всех интерекшенов'''
     for i in range(1, len(list_total_energy), 2):
@@ -76,6 +126,7 @@ def energy_ORCA(orca_opt_nohup):
     list_total_energy = l_first + l_intermediate + l_end
     del l_first, l_end, l_intermediate
     # получили один огромный список интерекшенов
+
     list_total_energy_def = []
     current_list = []
     for i in range(len(list_total_energy)):
@@ -536,7 +587,9 @@ if __name__ == '__main__':
     orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/Elsulfaverin/orca/opt/1/1.out'
     guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
     xtb_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/6LUD.out'
-    file_list = [orca_opt_nohup, guassian_opt_nohup, xtb_opt_nohup]
+    n_0_s_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_D3BJ_B3LYP_singlet_orca.out'
+
+    file_list = [orca_opt_nohup, n_0_s_orca]
     main(file_list)
 
 
