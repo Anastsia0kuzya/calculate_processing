@@ -8,13 +8,6 @@ import atomic_number as at
 atomic_number = at.atomic_number
 from itertools import islice
 
-def rmsd(final_energy_list, final_energy):
-# TODO: находит среднеквадратичное отклонение
-    rdsm = 0
-    for i in final_energy_list:
-        rdsm += (i - final_energy)**2
-    rdsm = math.sqrt(rdsm/len(final_energy_list))
-    return rdsm
 def various(file_path):
     with open(file_path) as file:
         version = 0
@@ -96,7 +89,12 @@ def energy_ORCA(orca_opt_nohup):
     for i in range(0, len(list_total_energy)//2, 2):
         l_first.append([list_total_energy[i], list_total_energy[i+1]])
     l_end = [] #конечный список
-    for i in range(len(list_total_energy)//2 + 1, len(list_total_energy) - 1, 2):
+    t = len(list_total_energy)//2 + 1
+    if t % 2 == 0:
+        ind = t
+    else:
+        ind = t - 1
+    for i in range(ind, len(list_total_energy) - 1, 2):
         l_end.append([list_total_energy[i], list_total_energy[i+1]]) #разбили последний и первый
     list_total_energy.clear()
     start_line_energy = [] #Список сокращенных интеракшенов, приводим к общему виду
@@ -125,8 +123,9 @@ def energy_ORCA(orca_opt_nohup):
         l_intermediate[i][1] = float(l_intermediate[i][1])
     list_total_energy = l_first + l_intermediate + l_end
     del l_first, l_end, l_intermediate
+    #print(list_total_energy)
     # получили один огромный список интерекшенов
-
+    #print(list_total_energy)
     list_total_energy_def = []
     current_list = []
     for i in range(len(list_total_energy)):
@@ -143,15 +142,17 @@ def energy_ORCA(orca_opt_nohup):
             i[k] = i[k][1]
     del current_list, list_total_energy
     final_list_energy = [] #вытаскиваем последние энергии
+
     for i in list_total_energy_def:
         if i is not str:
             final_list_energy.append(i[-1])
+    #print(list_total_energy_def)
     list_energy = list_total_energy_def[0], list_total_energy_def[1]
+    #print(list_energy)
     list_final_steps = []
     for f in list_energy:
         list_final_steps.append(f[-1])
     return list_total_energy_def, list_final_steps
-
 
 
 def symbol_to_atomic(atom):
@@ -209,10 +210,34 @@ def coords_ORCA(orca_opt_nohup):
         for i in list_CARTESIAN_COORDINATES:
             for k in i:
                 k[0] = symbol_to_atomic(k[0])
-    final_coord = list_CARTESIAN_COORDINATES[5]
+    final_coord = list_CARTESIAN_COORDINATES[-1]
     return list_CARTESIAN_COORDINATES, total_time, final_coord
 
+def rmsd(list_coord, final_coord):
+# TODO: находит среднеквадратичное отклонение
+    r = list_coord[0]
+
+    for i in range(len(r)):
+        for k in range(len(r[i])):
+            if k != 0:
+                r[i][k] = (r[i][k] - final_coord[i][k]) ** 2
+
+    for l in list_coord[1:]:
+        for k in range(len(l)):
+            for i in range(len(l[k])):
+                if i != 0:
+                    r[k][i] += (l[k][i] - final_coord[k][i]) ** 2
+
+    for t in r:
+        for j in range(len(t)):
+            if j != 0:
+                t[j] = math.sqrt(t[i] / len(list_coord))
+
+    return r
+
+
 def final_energy_ORCA(orca_opt_nohup):
+    v = various(orca_opt_nohup)
     final_total_energy_val = [] #список значений для последнего списка
     all_energy = []
     with open(orca_opt_nohup) as file:
@@ -242,7 +267,7 @@ def final_energy_ORCA(orca_opt_nohup):
         return final_total_energy, all_final_energy
     else:
         return final_total_energy, all_energy
-
+        
 
 def dict_ORCA(orca_opt_nohup):
     # TODO: выводит словарь с ионными шагами, большими словами, финальным временем, финальным результатом
@@ -282,7 +307,7 @@ def dict_ORCA(orca_opt_nohup):
         "total_time": total_time,
         }
     STEP['final_data'] = final_miny_dict
-    rsdm_orca = rmsd(list_final_energy_steps, final_energy)
+    rsdm_orca = rmsd(list_CARTESIAN_COORDINATES, final_coord)
     STEP['standard deviation'] = rsdm_orca
     STEP['name programm'] = 'ORCA'
     #print(STEP)
@@ -458,6 +483,8 @@ def coord_XTB(xtb_opt_nohub):
             i[k] = float(i[k])
     return list_CARTESIAN_COORDINATES, cpu_time
 
+
+
 def dict_XTB(xtb_opt_nohub):
     STEP = {}  # один большой словарь, где содержатся все ионные шаги
     step_range = []
@@ -584,12 +611,21 @@ def main(file_list: list):
 
 
 if __name__ == '__main__':
-    orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/Elsulfaverin/orca/opt/1/1.out'
-    guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
-    xtb_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/6LUD.out'
-    n_0_s_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_D3BJ_B3LYP_singlet_orca.out'
+    #orca_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/Elsulfaverin/orca/opt/1/1.out'
+    #guassian_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/2.log'
+    #xtb_opt_nohup = '/Users/anastasiakuznetsova/Documents/НИР/calculate_processing/6LUD.out'
 
-    file_list = [orca_opt_nohup, n_0_s_orca]
+    #n_3_t_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_B3LYP 6-311+G(d,p)_triplet_orca.out'
+    n_11_t_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_D3BJ_PBE0_6-311+G(d,p)_triplet_orca.out'
+    n_11_s_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_D3BJ_PBE0_6-311+G(d,p)_singlet_orca.out'
+    n_12_t_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_D3BJ_B3LYP_6-31G*_triplet_orca.out'
+    n_12_s_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_D3BJ_B3LYP_6-31G* _singlet_orca.out'
+    n_13_t_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_D3BJ_B3LYP_6-31G** _triplet_orca.out'
+    n_13_s_orca = '/Users/anastasiakuznetsova/Documents/НИР/Результаты расчета нитрена/nitren_D3BJ_B3LYP_6-31G**_singlet_orca.out'
+
+    #file_list = [orca_opt_nohup]
+    #file_list = [n_0_s_orca, n_1_s_orca]
+    file_list = [n_11_s_orca]
     main(file_list)
 
 
